@@ -30,8 +30,8 @@ This script will start a local server similar to [threejs.org](https://threejs.o
 
 Next scripts run all the appropriate testing.
 
-- `npm run test` - Lint testing and unit testing (individually being `npm run lint` and `npm run test-unit`)
-- `npm run test-e2e` - E2E testing. This one can take quite a long time and installs ~200 MB Chromium browser - it is primarily intended to be run only by GitHub Actions
+- `bun run test` runs lint and the core and addon unit suites.
+- `bun run build` followed by `bun run test-e2e` compares example screenshots locally. See [the porting notes](../PORTING.md) for browser setup and the other checks.
 
 The linting is there to keep a consistent code style across all of the code and the testing is there to help catch bugs and check that the code behaves as expected. It is important that neither of these steps comes up with any errors due to your changes.
 

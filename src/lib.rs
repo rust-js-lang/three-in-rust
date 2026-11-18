@@ -11,3 +11,6 @@ pub mod pipeline;
 
 #[path = "renderers/common/ProgrammableStage.rs"]
 pub mod programmable_stage;
+
+#[path = "renderers/common/BufferUtils.rs"]
+pub mod buffer_utils;

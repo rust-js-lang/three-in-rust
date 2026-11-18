@@ -19,4 +19,4 @@ pub static ATTRIBUTE_TYPE: AttributeTypes = AttributeTypes {
 
 // size of a chunk in bytes (STD140 layout)
 
-pub const GPU_CHUNK_BYTES: u32 = 16;
+pub const GPU_CHUNK_BYTES: f64 = 16.0;

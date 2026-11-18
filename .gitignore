@@ -27,3 +27,5 @@ test/unit/build
 **/node_modules
 
 /target/
+/Cargo.lock
+*.js.map

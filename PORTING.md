@@ -25,8 +25,9 @@ bun run build:rust
 bun run build:rust --check
 ```
 
-The link gives the compiler the matching standard library from its checkout. The generated JavaScript, declarations, and source maps are committed beside the Rust source. Three.js imports the JavaScript from its original path.
+The link gives the compiler the matching standard library from its checkout. The generated JavaScript and declarations are committed beside the Rust source. Source maps are generated locally. Three.js imports the JavaScript from its original path.
 
 ## Ported modules
 
 - `src/renderers/common/Constants.js` defines the renderer's attribute kinds and STD140 chunk size.
+- `src/constants.js` defines the 211 public Three.js constants. The export values and object property descriptors match upstream, and all 212 JSDoc blocks are preserved. Three object literals wrap differently, and the six standalone typedefs appear together at the top of the module.

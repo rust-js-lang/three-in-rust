@@ -10,7 +10,8 @@ if (!existsSync(cli)) {
 	throw new Error('Initialize the compiler with git submodule update --init rust-js.');
 }
 
-for (const name of readdirSync(patches).filter(name => name.endsWith('.patch')).sort()) {
+const patchFiles = existsSync(patches) ? readdirSync(patches).filter(name => name.endsWith('.patch')).sort() : [];
+for (const name of patchFiles) {
 	const path = join(patches, name);
 	const command = ['git', '-C', compiler, 'apply'];
 	const applied = Bun.spawnSync([...command, '--reverse', '--check', path], { stderr: 'ignore' });

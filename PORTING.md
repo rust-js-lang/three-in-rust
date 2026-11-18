@@ -19,7 +19,7 @@ In Apple Container, Ubuntu’s signed package sources supplied the Vulkan depend
 
 ## Rebuild the Rust modules
 
-The `rust-js` submodule pins the compiler and its bindings. The port keeps its compiler fixes in `patches/rust-js/`. The build applies those patches in filename order and reuses patches already applied.
+The `rust-js` submodule pins the compiler and its bindings. The current pin includes the four compiler fixes upstream. If a future port needs a local compiler fix, the build applies patches in `patches/rust-js/` in filename order.
 
 ```sh
 git submodule update --init rust-js

@@ -17,3 +17,6 @@ pub mod buffer_utils;
 
 #[path = "renderers/common/Binding.rs"]
 pub mod binding;
+
+#[path = "extras/core/Interpolations.rs"]
+pub mod interpolations;

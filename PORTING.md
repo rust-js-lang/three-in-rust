@@ -40,3 +40,4 @@ The compiler uses the Rust toolchain pinned in the submodule. The generated Java
 - `src/renderers/common/ProgrammableStage.js` stores shader code and stage metadata. Its private counter and constructor match upstream, including the counter sequence observed by JavaScript subclasses. The Rust enum emits the same three stage strings.
 - `src/renderers/common/BufferUtils.js` computes STD140 alignment. Its three helpers preserve the original documentation, JavaScript parameter defaults, and results.
 - `src/renderers/common/Binding.js` is the base class for resource bindings. Its constructor default, visibility bitmask, and clone behavior match upstream, including when a subclass supplies the constructor.
+- `src/extras/core/Interpolations.js` evaluates Catmull–Rom splines and quadratic and cubic Bézier curves. The three exported functions, their four JSDoc blocks, and 1,536 sampled results match the original and native Rust.

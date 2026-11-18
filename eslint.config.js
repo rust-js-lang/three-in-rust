@@ -140,7 +140,9 @@ export default [
 		name: 'rust-js generated modules',
 		files: rustModules,
 		rules: {
+			'computed-property-spacing': 'off',
 			'padded-blocks': 'off',
+			'padding-line-between-statements': 'off',
 			'space-in-parens': 'off',
 			'space-unary-ops': 'off'
 		}

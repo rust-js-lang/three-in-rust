@@ -26,3 +26,6 @@ pub mod shader_chunks;
 
 #[path = "renderers/shaders/ShaderChunk.rs"]
 pub mod shader_chunk;
+
+#[path = "renderers/shaders/UniformsUtils.rs"]
+pub mod uniforms_utils;

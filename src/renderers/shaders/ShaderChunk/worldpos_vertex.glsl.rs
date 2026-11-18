@@ -1,5 +1,5 @@
 js::export_default! {
-    const GLSL: &str = /* glsl */ r#"
+    pub const GLSL: &str = /* glsl */ r#"
 #if defined( USE_ENVMAP ) || defined( DISTANCE ) || defined ( USE_SHADOWMAP ) || defined ( USE_TRANSMISSION ) || NUM_SPOT_LIGHT_COORDS > 0
 
 	vec4 worldPosition = vec4( transformed, 1.0 );

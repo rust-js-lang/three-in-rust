@@ -1,5 +1,5 @@
 js::export_default! {
-    const GLSL: &str = /* glsl */ r#"
+    pub const GLSL: &str = /* glsl */ r#"
 #ifdef DITHERING
 
 	// based on https://www.shadertoy.com/view/MslGR8

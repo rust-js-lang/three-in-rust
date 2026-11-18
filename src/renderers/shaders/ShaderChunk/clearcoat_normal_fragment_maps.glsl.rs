@@ -1,5 +1,5 @@
 js::export_default! {
-    const GLSL: &str = /* glsl */ r#"
+    pub const GLSL: &str = /* glsl */ r#"
 #ifdef USE_CLEARCOAT_NORMALMAP
 
 	vec3 clearcoatMapN = texture2D( clearcoatNormalMap, vClearcoatNormalMapUv ).xyz * 2.0 - 1.0;

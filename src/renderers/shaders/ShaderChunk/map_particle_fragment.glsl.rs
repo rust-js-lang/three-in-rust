@@ -1,5 +1,5 @@
 js::export_default! {
-    const GLSL: &str = /* glsl */ r#"
+    pub const GLSL: &str = /* glsl */ r#"
 #if defined( USE_MAP ) || defined( USE_ALPHAMAP )
 
 	#if defined( USE_POINTS_UV )

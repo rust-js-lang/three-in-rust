@@ -1,5 +1,5 @@
 js::export_default! {
-    const GLSL: &str = /* glsl */ r#"
+    pub const GLSL: &str = /* glsl */ r#"
 /**
  * This is a template that can be used to light a material, it uses pluggable
  * RenderEquations (RE)for specific lighting scenarios.

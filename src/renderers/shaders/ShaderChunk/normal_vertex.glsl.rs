@@ -1,5 +1,5 @@
 js::export_default! {
-    const GLSL: &str = /* glsl */ r#"
+    pub const GLSL: &str = /* glsl */ r#"
 #ifndef FLAT_SHADED // normal is computed with derivatives when FLAT_SHADED
 
 	vNormal = normalize( transformedNormal );

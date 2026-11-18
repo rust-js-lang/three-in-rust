@@ -1,5 +1,5 @@
 js::export_default! {
-    const GLSL: &str = /* glsl */ r#"
+    pub const GLSL: &str = /* glsl */ r#"
 
 vec4 LinearTransferOETF( in vec4 value ) {
 	return value;

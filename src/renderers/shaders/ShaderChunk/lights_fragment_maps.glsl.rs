@@ -1,5 +1,5 @@
 js::export_default! {
-    const GLSL: &str = /* glsl */ r#"
+    pub const GLSL: &str = /* glsl */ r#"
 #if defined( RE_IndirectDiffuse )
 
 	#ifdef USE_LIGHTMAP

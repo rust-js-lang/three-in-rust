@@ -1,5 +1,5 @@
 js::export_default! {
-    const GLSL: &str = /* glsl */ r#"
+    pub const GLSL: &str = /* glsl */ r#"
 #if defined( USE_MORPHCOLORS )
 
 	// morphTargetBaseInfluence is set based on BufferGeometry.morphTargetsRelative value:

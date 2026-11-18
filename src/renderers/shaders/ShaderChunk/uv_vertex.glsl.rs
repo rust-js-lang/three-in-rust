@@ -1,5 +1,5 @@
 js::export_default! {
-    const GLSL: &str = /* glsl */ r#"
+    pub const GLSL: &str = /* glsl */ r#"
 #if defined( USE_UV ) || defined( USE_ANISOTROPY )
 
 	vUv = vec3( uv, 1 ).xy;

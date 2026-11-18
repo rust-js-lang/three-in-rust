@@ -23,3 +23,6 @@ pub mod interpolations;
 
 #[path = "renderers/shaders/chunks.rs"]
 pub mod shader_chunks;
+
+#[path = "renderers/shaders/ShaderChunk.rs"]
+pub mod shader_chunk;

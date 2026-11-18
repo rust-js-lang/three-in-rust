@@ -1,5 +1,5 @@
 js::export_default! {
-    const GLSL: &str = /* glsl */ r#"
+    pub const GLSL: &str = /* glsl */ r#"
 vec4 mvPosition = vec4( transformed, 1.0 );
 
 #ifdef USE_BATCHING

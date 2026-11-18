@@ -1,5 +1,5 @@
 js::export_default! {
-    const GLSL: &str = /* glsl */ r#"
+    pub const GLSL: &str = /* glsl */ r#"
 #if defined( USE_LOGARITHMIC_DEPTH_BUFFER )
 
 	// Doing a strict comparison with == 1.0 can cause noise artifacts

@@ -1,5 +1,5 @@
 js::export_default! {
-    const GLSL: &str = /* glsl */ r#"
+    pub const GLSL: &str = /* glsl */ r#"
 #ifndef saturate
 // <common> may have defined saturate() already
 #define saturate( a ) clamp( a, 0.0, 1.0 )

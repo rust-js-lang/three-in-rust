@@ -1,5 +1,5 @@
 js::export_default! {
-    const GLSL: &str = /* glsl */ r#"
+    pub const GLSL: &str = /* glsl */ r#"
 #ifdef USE_TRANSMISSION
 
 	// Transmission code is based on glTF-Sampler-Viewer

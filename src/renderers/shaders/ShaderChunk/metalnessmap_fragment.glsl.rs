@@ -1,5 +1,5 @@
 js::export_default! {
-    const GLSL: &str = /* glsl */ r#"
+    pub const GLSL: &str = /* glsl */ r#"
 float metalnessFactor = metalness;
 
 #ifdef USE_METALNESSMAP

@@ -1,5 +1,5 @@
 js::export_default! {
-    const GLSL: &str = /* glsl */ r#"
+    pub const GLSL: &str = /* glsl */ r#"
 
 float G_BlinnPhong_Implicit( /* const in float dotNL, const in float dotNV */ ) {
 

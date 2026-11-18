@@ -1,0 +1,353 @@
+diff --git a/TESTS.md b/TESTS.md
+index d616e5cbb..f9bf55333 100644
+--- a/TESTS.md
++++ b/TESTS.md
+@@ -1,5 +1,9 @@
+ # Tests at a glance
+ 
++Changed on 2026-11-18: test/lowering-comment-fields.test.ts covers
++constructor field documentation and checks that a class with field
++declarations has no JSDoc on the corresponding constructor assignment.
++
+ Changed on 2026-11-18 (#1904): test/intl-locale.test.ts, five tests, holds
+ `Intl.Locale` as it's written from TypeScript's library: Rust callers of
+ each member on Bun, a strict TypeScript caller, and the generator's refusal
+diff --git a/docs/decisions/0444-a-comment-is-where-its-code-is.md b/docs/decisions/0444-a-comment-is-where-its-code-is.md
+index a5b8058e8..b70e2ac76 100644
+--- a/docs/decisions/0444-a-comment-is-where-its-code-is.md
++++ b/docs/decisions/0444-a-comment-is-where-its-code-is.md
+@@ -1206,3 +1206,21 @@ mutations `comment-above-a-let-of-a-value-lost`,
+ `comment-above-a-let-of-a-block-lost` (`to_oxc.ts`),
+ `let-value-past-a-types-equals` and `let-value-past-the-whole-line`
+ (`to_oxc/openings.ts`).
++
++## Amendment: a constructor assignment keeps its field's JSDoc (2026-11-18)
++
++Three.js's `Pipeline` puts JSDoc before `this.cacheKey = cacheKey;` and
++`this.usedTimes = 0;`. The Rust field documentation already reaches the
++one struct literal through `ObjectLayout`. Constructor lowering now
++carries that documentation to the corresponding assignment at its
++literal field's span. The printer uses the same field-comment placement
++for object literals and constructor assignments.
++
++A class with explicit field declarations keeps its constructor
++assignments free of field JSDoc.
++
++Case of [0262](0262-when-rust-and-js-disagree.md): comments change
++neither evaluation nor results. The constructor test in
++`test/lowering-comment-fields.test.ts` holds both forms and the
++`constructor-field-docs-lost` and `declared-field-documented-in-constructor`
++mutations exercise both directions.
+diff --git a/docs/guide/project/modules.md b/docs/guide/project/modules.md
+index cfb400a2b..671b759dd 100644
+--- a/docs/guide/project/modules.md
++++ b/docs/guide/project/modules.md
+@@ -1169,6 +1169,11 @@ export function resolved(dispatcher) {
+ }
+ ```
+ 
++When a class's constructor turns its struct literal's fields into
++assignments such as `this.cacheKey = cacheKey`, each field's JSDoc stays
++above its assignment. A class that declares its own fields has no JSDoc
++on the corresponding constructor assignment.
++
+ A struct's field's doc comment documents the object its literal makes
+ where the crate writes one literal of the struct: it's that field's
+ JSDoc there, as a JS object documents its fields. A struct made in more
+diff --git a/scripts/mutations/lower/classes/member_functions.ts b/scripts/mutations/lower/classes/member_functions.ts
+index 55fdfa0b1..ad4845c1f 100644
+--- a/scripts/mutations/lower/classes/member_functions.ts
++++ b/scripts/mutations/lower/classes/member_functions.ts
+@@ -96,7 +96,7 @@ export const mutations: Mutation[] = [
+     breaks:
+       "a constructor that makes its instance, `let fiber = Fiber { .. }; ..; fiber`, is refused, React's `FiberNode` its object form",
+     file: "src/lower/classes/member_functions.rs",
+-    find: "    instance_as_this(body)?;\n",
++    find: "    instance_as_this(body, docs.as_deref_mut())?;\n",
+     replace: "",
+     tests: ["test/class-constructors.test.ts", "-t", "constructor's statements set this"],
+   },
+@@ -123,11 +123,27 @@ export const mutations: Mutation[] = [
+     breaks:
+       "a handle on a constructor's instance's field, `bump(&fiber.reads)`, reads the instance by preparation's `this$`, `const this$ = this; .. return this$.reads;`, not by its class's name, `fiber` (#449's `prepare::this_handles` keeps its `this` right)",
+     file: "src/lower/classes/member_functions.rs",
+-    find: "            set_this(&mut function.body)?;\n            instance_outside_accessors(class, &mut function.body);\n",
+-    replace: "            set_this(&mut function.body)?;\n",
++    find: "            instance_outside_accessors(class, &mut function.body);\n            // Of a class that extends one",
++    replace: "            // Of a class that extends one",
+     tests: ["test/corpus.test.ts", "-t", "^class_constructor_statements.rs$"],
+     snapshots: true,
+   },
++  {
++    name: "constructor-field-docs-lost",
++    breaks: "a constructor's field assignment loses the field's JSDoc",
++    file: "src/lower/classes/member_functions.rs",
++    find: "                    docs.push((written.lo, doc.to_owned()));\n",
++    replace: "                    let _ = (docs, doc);\n",
++    tests: ["test/lowering-comment-fields.test.ts", "-t", "a constructor assignment keeps"],
++  },
++  {
++    name: "declared-field-documented-in-constructor",
++    breaks: "a class that declares its fields prints their JSDoc in its constructor",
++    file: "src/lower/classes/member_functions.rs",
++    find: "adt.is_some_and(|adt| !super::declares_fields(tcx, adt)).then_some(constructor_field_docs);",
++    replace: "adt.is_some().then_some(constructor_field_docs);",
++    tests: ["test/lowering-comment-fields.test.ts", "-t", "a constructor assignment keeps"],
++  },
+   {
+     name: "class-instance-return-kept",
+     breaks:
+diff --git a/src/js.rs b/src/js.rs
+index 1db8d2a9c..3458c327b 100644
+--- a/src/js.rs
++++ b/src/js.rs
+@@ -310,6 +310,9 @@ pub struct Class {
+     pub forwarding: Vec<String>,
+     /// The fields an ES class declares, `chunkName;`, each where its Rust field is (#568).
+     pub fields: Vec<(Span, String)>,
++    /// JSDoc that belongs to the constructor's assignments when the class
++    /// does not declare those fields separately (ADR 0444, amended).
++    pub constructor_field_docs: Vec<(u32, String)>,
+     /// Whether the item after it, a `js::on_load!`'s one statement,
+     /// replaces its prototype, `ReactPromise.prototype =
+     /// Object.create(Promise.prototype)`: printed right after its
+diff --git a/src/lower/classes/member_functions.rs b/src/lower/classes/member_functions.rs
+index 6eced42f2..dc8196b2c 100644
+--- a/src/lower/classes/member_functions.rs
++++ b/src/lower/classes/member_functions.rs
+@@ -19,6 +19,7 @@ pub(in crate::lower) fn as_member(
+     def_id: DefId,
+     class: &str,
+     function: &mut js::Function,
++    constructor_field_docs: &mut Vec<(u32, String)>,
+ ) -> Result<(), &'static str> {
+     let Some(member) = member(tcx, def_id) else {
+         return Ok(());
+@@ -28,15 +29,19 @@ pub(in crate::lower) fn as_member(
+         // a method's `this` (#359).
+         Member::Constructor => {
+             spread_state(tcx, def_id, function)?;
+-            set_this(&mut function.body)?;
++            let adt = class_of(tcx, def_id);
++            let assignment_docs = adt
++                .is_some_and(|adt| !super::declares_fields(tcx, adt))
++                .then_some(constructor_field_docs);
++            set_this(&mut function.body, assignment_docs)?;
+             instance_outside_accessors(class, &mut function.body);
+             // Of a class that extends one, its superclass constructs `this` first,
+             // `super(props);`, at its name: a comment its body starts with follows.
+             // Of `Error`'s, the fields its constructor sets, `super(message,
+             // { cause })` (#1808).
+-            if let Some(adt) = class_of(tcx, def_id).filter(|&adt| super::extends_error(tcx, adt)) {
++            if let Some(adt) = adt.filter(|&adt| super::extends_error(tcx, adt)) {
+                 super::errors::super_of_fields(tcx, adt, &mut function.body, function.name_span)?;
+-            } else if class_of(tcx, def_id).is_some_and(|adt| superclass(tcx, adt).is_some()) {
++            } else if adt.is_some_and(|adt| superclass(tcx, adt).is_some()) {
+                 let given = (function.params.iter())
+                     .map(|param| match param {
+                         Pattern::Name(name) => Ok(Expr::var(name)),
+@@ -153,7 +158,12 @@ pub(in crate::lower) fn receiver_as_this(
+ /// `this.a = a;`, each where its value is, or at `span`: not of a field
+ /// that's `undefined`, a `None`, which an object leaves out (ADR 0280), as
+ /// JS's constructor function sets no property it hasn't a value of.
+-fn fields_set(props: Vec<Prop>, layout: &js::ObjectLayout, span: js::Span) -> Result<Vec<Stmt>, &'static str> {
++fn fields_set(
++    props: Vec<Prop>,
++    layout: &js::ObjectLayout,
++    span: js::Span,
++    mut docs: Option<&mut Vec<(u32, String)>>,
++) -> Result<Vec<Stmt>, &'static str> {
+     let mut props = props;
+     js::undefined_keys::left_out(&mut props, layout);
+     let mut out = Vec::with_capacity(props.len());
+@@ -161,7 +171,16 @@ fn fields_set(props: Vec<Prop>, layout: &js::ObjectLayout, span: js::Span) -> Re
+         match prop {
+             Prop::Field(name, value) => {
+                 // Where its value is, which its comment is before.
+-                let at = if value.span.is_none() { span } else { value.span };
++                let at = if let Some(docs) = docs.as_deref_mut()
++                    && let Some((written, doc)) = layout.written(&name).zip(layout.doc(&name))
++                {
++                    docs.push((written.lo, doc.to_owned()));
++                    written
++                } else if value.span.is_none() {
++                    span
++                } else {
++                    value.span
++                };
+                 out.push(StmtKind::Assign(Expr::member(Expr::this(), name), value).at(at));
+             }
+             _ => return Err("a constructor whose struct literal has a field of no name"),
+@@ -189,7 +208,7 @@ fn literal_given(value: &Expr) -> Option<(&Expr, bool)> {
+ 
+ /// The fields of what `literal_given` found set on `this`, then, of a
+ /// counted one, `this` counted, `$countedInstance(this)` (#1228).
+-fn given_set(value: Expr, span: js::Span) -> Result<Vec<Stmt>, &'static str> {
++fn given_set(value: Expr, span: js::Span, docs: Option<&mut Vec<(u32, String)>>) -> Result<Vec<Stmt>, &'static str> {
+     let counted = literal_given(&value).is_some_and(|(_, counted)| counted);
+     let literal = match counted {
+         true => crate::lower::std_types::rc::counted_instance_made(&value)
+@@ -200,14 +219,14 @@ fn given_set(value: Expr, span: js::Span) -> Result<Vec<Stmt>, &'static str> {
+     let ExprKind::Object(props, layout) = literal.kind else {
+         unreachable!("a struct literal")
+     };
+-    let mut fields = fields_set(props, &layout, span)?;
++    let mut fields = fields_set(props, &layout, span, docs)?;
+     if counted {
+         fields.push(StmtKind::Expr(crate::lower::std_types::rc::counted_instance(Expr::this())).at(span));
+     }
+     Ok(fields)
+ }
+ 
+-fn instance_as_this(body: &mut Vec<Stmt>) -> Result<(), &'static str> {
++fn instance_as_this(body: &mut Vec<Stmt>, docs: Option<&mut Vec<(u32, String)>>) -> Result<(), &'static str> {
+     let Some(Stmt {
+         kind: StmtKind::Return(Some(Expr {
+             kind: ExprKind::Var(instance),
+@@ -233,7 +252,7 @@ fn instance_as_this(body: &mut Vec<Stmt>) -> Result<(), &'static str> {
+     let (StmtKind::Const(_, value) | StmtKind::Let(_, Some(value))) = made.kind else {
+         unreachable!("the instance's declaration")
+     };
+-    let fields = given_set(value, made.span)?;
++    let fields = given_set(value, made.span, docs)?;
+     body.splice(at..at, fields);
+     body.pop();
+     js::statement_lists(body, &mut |list| {
+@@ -253,8 +272,8 @@ fn instance_as_this(body: &mut Vec<Stmt>) -> Result<(), &'static str> {
+ /// a; this.b = b;`, and `return;` where it's not the body's last; not a
+ /// closure's, whose `return` is its own. Or the instance a variable holds,
+ /// `instance_as_this`.
+-fn set_this(body: &mut Vec<Stmt>) -> Result<(), &'static str> {
+-    instance_as_this(body)?;
++fn set_this(body: &mut Vec<Stmt>, mut docs: Option<&mut Vec<(u32, String)>>) -> Result<(), &'static str> {
++    instance_as_this(body, docs.as_deref_mut())?;
+     let mut fine = Ok(());
+     let mut outermost = true;
+     js::statement_lists(body, &mut |list| {
+@@ -272,7 +291,7 @@ fn set_this(body: &mut Vec<Stmt>) -> Result<(), &'static str> {
+             let StmtKind::Return(Some(value)) = stmt.kind else {
+                 unreachable!("a struct literal returned")
+             };
+-            match given_set(value, span) {
++            match given_set(value, span, docs.as_deref_mut()) {
+                 Ok(fields) => out.extend(fields),
+                 Err(why) => fine = Err(why),
+             }
+diff --git a/src/lower/pipeline.rs b/src/lower/pipeline.rs
+index 8ebbc5a68..0ece61207 100644
+--- a/src/lower/pipeline.rs
++++ b/src/lower/pipeline.rs
+@@ -844,7 +844,10 @@ pub fn lower_crate<'tcx>(
+                 let owner = fns[&def_id].owner.as_deref().unwrap_or_default();
+                 let mut copied =
+                     std::iter::once(&mut lowered.function).chain(copies.iter_mut().map(|c| &mut c.function));
+-                if let Some(what) = copied.find_map(|f| super::classes::as_member(tcx, def_id, owner, f).err()) {
++                let mut constructor_field_docs = Vec::new();
++                if let Some(what) = copied
++                    .find_map(|f| super::classes::as_member(tcx, def_id, owner, f, &mut constructor_field_docs).err())
++                {
+                     super::refusal::refuse(tcx, tcx.def_span(def_id), super::refusal::Refused::Feature(what));
+                     failed = true;
+                     continue;
+@@ -862,6 +865,7 @@ pub fn lower_crate<'tcx>(
+                                     .map_or(js::Span::NONE, |adt| sources.item_span(tcx, adt)),
+                                 ..super::classes::js_class(tcx, def_id, &import_names[&module])
+                             });
++                            class.constructor_field_docs.extend(constructor_field_docs);
+                             let forwarding = forwarding_prototypes.contains(&def_id);
+                             super::classes::place((member, forwarding), class, lowered.function.name.word()); // word: the method's JS name, as the class shows it
+                         }
+diff --git a/src/to_oxc.rs b/src/to_oxc.rs
+index 0c76201ff..9783bb22e 100644
+--- a/src/to_oxc.rs
++++ b/src/to_oxc.rs
+@@ -1222,12 +1222,11 @@ fn owned(i: usize) -> u32 {
+     u32::MAX - i as u32
+ }
+ 
+-/// Where each object literal's field's value starts whose struct's field
+-/// has a doc comment, the crate's one literal of it, and its JSDoc
+-/// (`ObjectLayout::docs`, ADR 0444, amended).
++/// Where each documented field is written, in its struct's one literal
++/// or a constructor assignment made from it (ADR 0444, amended).
+ fn field_docs(module: &Module) -> IndexMap<u32, String> {
+     let mut docs = IndexMap::default();
+-    let mut of = |mut stmts: Vec<js::Stmt>| {
++    let of = |docs: &mut IndexMap<u32, String>, mut stmts: Vec<js::Stmt>| {
+         js::each_expr_mut(&mut stmts, &mut |e| {
+             let ExprKind::Object(props, layout) = &e.kind else {
+                 return;
+@@ -1245,10 +1244,15 @@ fn field_docs(module: &Module) -> IndexMap<u32, String> {
+     };
+     for item in &module.items {
+         match item {
+-            js::Item::Const(c) => of(vec![StmtKind::Expr(c.value.clone()).at(js::Span::NONE)]),
+-            js::Item::Statements(stmts) => of(stmts.clone()),
+-            js::Item::Function(f) => of(f.body.clone()),
+-            js::Item::Namespace(n) => n.methods.iter().for_each(|method| of(method.body.clone())),
++            js::Item::Const(c) => of(&mut docs, vec![StmtKind::Expr(c.value.clone()).at(js::Span::NONE)]),
++            js::Item::Statements(stmts) => of(&mut docs, stmts.clone()),
++            js::Item::Function(f) => of(&mut docs, f.body.clone()),
++            js::Item::Namespace(n) => {
++                if let Some(class) = &n.class {
++                    docs.extend(class.constructor_field_docs.iter().cloned());
++                }
++                n.methods.iter().for_each(|method| of(&mut docs, method.body.clone()));
++            }
+         }
+     }
+     docs
+diff --git a/test/lowering-comment-fields.test.ts b/test/lowering-comment-fields.test.ts
+index d413ae659..f7406d781 100644
+--- a/test/lowering-comment-fields.test.ts
++++ b/test/lowering-comment-fields.test.ts
+@@ -586,6 +586,49 @@ pub fn two() -> Twice {
+   expect((lib.prototype() as unknown as { isPersistent: () => boolean }).isPersistent()).toBe(true);
+ });
+ 
++test("a constructor assignment keeps its field's doc comment", async () => {
++  const { js } = await compiled("class-field-doc", `#[cfg_attr(rust_js, rust_js::class(es))]
++pub struct Pipeline {
++    /// The key used to cache this pipeline.
++    pub cache_key: String,
++    /// The number of renderers using the pipeline.
++    pub used_times: f64,
++}
++
++#[cfg_attr(rust_js, rust_js::class)]
++impl Pipeline {
++    pub fn new(cache_key: String) -> Self {
++        Self {
++            cache_key,
++            used_times: 0.0,
++        }
++    }
++}
++
++#[cfg_attr(rust_js, rust_js::class(es, fields))]
++pub struct DeclaredPipeline {
++    /// A declared cache key.
++    pub cache_key: String,
++}
++
++#[cfg_attr(rust_js, rust_js::class)]
++impl DeclaredPipeline {
++    pub fn new(cache_key: String) -> Self {
++        Self { cache_key }
++    }
++}
++`);
++  expect(js).toContain(`  constructor(cacheKey) {
++    /** The key used to cache this pipeline. */
++    this.cacheKey = cacheKey;
++    /** The number of renderers using the pipeline. */
++    this.usedTimes = 0;
++  }`);
++  expect(js.split("export class DeclaredPipeline")[1]).toContain(`  constructor(cacheKey) {
++    this.cacheKey = cacheKey;
++  }`);
++});
++
+ // The playground's `Loaded { module: module.await, crates: crate_files, .. }`:
+ // a field's value MIR moves through a temporary, `_5 = crate_files`, is the
+ // variable read where the temporary was, so the field's doc comment, which

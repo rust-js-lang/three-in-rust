@@ -1,0 +1,4 @@
+[submodule "rust-js"]
+	path = rust-js
+	url = https://github.com/rust-js-lang/rust-js.git
+	ignore = dirty

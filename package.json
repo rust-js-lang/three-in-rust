@@ -45,7 +45,7 @@
     "start": "npm run dev",
     "test": "bun run lint && bun run test-unit && bun run test-unit-addons",
     "build": "bun --bun rollup -c utils/build/rollup.config.js",
-    "build:rust": "bun \"$RUST_JS_CHECKOUT/tooling/cli.js\" build",
+    "build:rust": "bun scripts/build-rust.ts",
     "build-docs": "jsdoc -c utils/docs/jsdoc.config.json && npm run build-llms",
     "build-llms": "node utils/llms/build.js",
     "dev": "node utils/build/dev.js && node utils/server.js -p 8080",
@@ -94,6 +94,9 @@
     "url": "https://github.com/mrdoob/three.js/issues"
   },
   "homepage": "https://threejs.org/",
+  "dependencies": {
+    "@rust-js/std": "file:./rust-js/std"
+  },
   "devDependencies": {
     "@eslint/js": "^9.0.0",
     "@rollup/plugin-node-resolve": "^16.0.0",

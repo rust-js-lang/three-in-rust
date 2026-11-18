@@ -14,3 +14,6 @@ pub mod programmable_stage;
 
 #[path = "renderers/common/BufferUtils.rs"]
 pub mod buffer_utils;
+
+#[path = "renderers/common/Binding.rs"]
+pub mod binding;

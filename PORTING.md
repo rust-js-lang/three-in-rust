@@ -39,3 +39,4 @@ The compiler uses the Rust toolchain pinned in the submodule. The generated Java
 - `src/renderers/common/Pipeline.js` is the base class for renderer pipelines. Its constructor and the four upstream JSDoc blocks are preserved. The generated class declares the default export inline.
 - `src/renderers/common/ProgrammableStage.js` stores shader code and stage metadata. Its private counter and constructor match upstream, including the counter sequence observed by JavaScript subclasses. The Rust enum emits the same three stage strings.
 - `src/renderers/common/BufferUtils.js` computes STD140 alignment. Its three helpers preserve the original documentation, JavaScript parameter defaults, and results.
+- `src/renderers/common/Binding.js` is the base class for resource bindings. Its constructor default, visibility bitmask, and clone behavior match upstream, including when a subclass supplies the constructor.

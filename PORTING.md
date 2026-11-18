@@ -17,6 +17,8 @@ On macOS with Chrome 158, the 562-example screenshot suite had 109 reference mis
 
 In Apple Container, Ubuntu’s signed package sources supplied the Vulkan dependencies and Puppeteer installed its pinned Chrome 156.0.8078.47. The Bun-based setup omits the optional NodeSource feed. Package installation completed without certificate warnings. In a four-example comparison, stock Three.js and the port each matched three reference screenshots exactly. Both measured a 4.2% difference for `webgpu_hdr`.
 
+The full Apple Container run produced 458 screenshot results. Of those, 105 differed from the stored references. Two shards completed, and three reached the local time limit. A repeat comparison of five failures produced identical mismatch percentages for stock Three.js and the port. The container used Mesa 25.2.8-0ubuntu0.24.04.5 under Rosetta. The [upstream pull request’s CI run](https://github.com/mrdoob/three.js/actions/runs/43251991602) passed all five shards on its Ubuntu 24.04.5 runner with Mesa 25.2.8-0ubuntu0.24.04.4.
+
 ## Rebuild the Rust modules
 
 The `rust-js` submodule pins the compiler and its bindings. The current pin includes the four compiler fixes upstream. If a future port needs a local compiler fix, the build applies patches in `patches/rust-js/` in filename order.

@@ -20,3 +20,6 @@ pub mod binding;
 
 #[path = "extras/core/Interpolations.rs"]
 pub mod interpolations;
+
+#[path = "renderers/shaders/chunks.rs"]
+pub mod shader_chunks;

@@ -8,24 +8,39 @@ function glsl() {
 
 			if ( /\.glsl.js$/.test( id ) === false ) return;
 
-			code = new MagicString( code );
+			const source = new MagicString( code );
 
-			code.replace( /\/\* glsl \*\/\`(.*?)\`/sg, function ( match, p1 ) {
+			for ( const statement of this.parse( code ).body ) {
 
-				return JSON.stringify(
-					p1
+				const declaration = statement.declaration;
+				const expressions = statement.type === 'ExportDefaultDeclaration' ? [ declaration ] :
+					declaration?.type === 'VariableDeclaration' ? declaration.declarations.map( entry => entry.init ) : [];
+
+				for ( const expression of expressions ) {
+
+					if ( expression?.type !== 'TemplateLiteral' || expression.expressions.length !== 0 ) continue;
+
+					const prefix = code.slice( statement.start, expression.start );
+					const marker = /\/\* glsl \*\/\s*$/.exec( prefix );
+					if ( ! marker ) continue;
+
+					// Use the shader string as JavaScript reads it, including escaped tabs.
+					const shader = expression.quasis[ 0 ].value.cooked
 						.trim()
 						.replace( /\r/g, '' )
 						.replace( /[ \t]*\/\/.*\n/g, '' ) // remove //
 						.replace( /[ \t]*\/\*[\s\S]*?\*\//g, '' ) // remove /* */
-						.replace( /\n{2,}/g, '\n' ) // # \n+ to \n
-				);
+						.replace( /\n{2,}/g, '\n' ); // # \n+ to \n
 
-			} );
+					source.overwrite( statement.start + marker.index, expression.end, JSON.stringify( shader ) );
+
+				}
+
+			}
 
 			return {
-				code: code.toString(),
-				map: code.generateMap()
+				code: source.toString(),
+				map: source.generateMap()
 			};
 
 		}

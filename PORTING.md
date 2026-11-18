@@ -32,3 +32,4 @@ The compiler uses the Rust toolchain pinned in the submodule. The generated Java
 - `src/renderers/common/Constants.js` defines the renderer's attribute kinds and STD140 chunk size.
 - `src/constants.js` defines the 211 public Three.js constants. The export values and object property descriptors match upstream, and all 212 JSDoc blocks are preserved. Three object literals wrap differently, and the six standalone typedefs appear together at the top of the module.
 - `src/renderers/webgl-fallback/utils/WebGLConstants.js` maps 11 WebGL extensions to their feature names. The generated keys retain the original names, values, order, and property descriptors.
+- `src/renderers/common/Pipeline.js` is the base class for renderer pipelines. Its constructor and the four upstream JSDoc blocks are preserved. The generated class declares the default export inline.

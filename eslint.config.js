@@ -1,9 +1,13 @@
+import { globSync } from 'node:fs';
 import js from '@eslint/js';
 import globals from 'globals';
 import mdcs from 'eslint-config-mdcs';
 import compat from 'eslint-plugin-compat';
 import html from 'eslint-plugin-html';
 import jsdoc from 'eslint-plugin-jsdoc';
+
+const rustModules = globSync( 'src/**/*.rs', { cwd: import.meta.dirname } )
+	.map( path => path.replace( /\.rs$/, '.js' ) );
 
 export default [
 	// files to ignore
@@ -128,6 +132,16 @@ export default [
 			'jsdoc/require-param-description': 'off',
 			'jsdoc/require-returns-description': 'off',
 			'jsdoc/require-param-type': 'error'
+		}
+	},
+
+	// rust-js formats generated JavaScript. Keep the other lint checks.
+	{
+		name: 'rust-js generated modules',
+		files: rustModules,
+		rules: {
+			'padded-blocks': 'off',
+			'space-in-parens': 'off'
 		}
 	},
 

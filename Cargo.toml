@@ -4,5 +4,8 @@ version = "0.0.0"
 edition = "2024"
 publish = false
 
+[dependencies]
+js = { package = "rust-js-builtins", path = "rust-js/builtins" }
+
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ["cfg(rust_js)"] }

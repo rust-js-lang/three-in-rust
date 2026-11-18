@@ -1,0 +1,225 @@
+diff --git a/docs/decisions/0948-a-value-read-then-stepped-is-plus-plus.md b/docs/decisions/0948-a-value-read-then-stepped-is-plus-plus.md
+index 68b7ef341..962da495b 100644
+--- a/docs/decisions/0948-a-value-read-then-stepped-is-plus-plus.md
++++ b/docs/decisions/0948-a-value-read-then-stepped-is-plus-plus.md
+@@ -44,3 +44,19 @@ before preparation makes one. Any other step, `a + 2`, stays as it was.
+   stepped is x++".
+ - Mutations: `post-step-unmade`, `post-step-of-any-number`,
+   `post-step-down-is-up`.
++
++## Amendment: Three.js's shader stage takes and increments its ID
++
++A read of a plain variable followed by its compound unit step gives the
++same old value as a postfix update. The variable is read without a
++getter. The compound form appears when `Cell::replace` reads and steps
++the same numeric thread-local.
++
++An ES constructor can put that update directly in its immediately
++following field assignment when the assignment is the old value's
++only use. The receiver is initialized before the assignment, so
++evaluating the plain `this` receiver before the update changes no
++effects. The case of ADR 0262 remains N.
++
++The constructor test checks the emitted assignment and the counter
++sequence, including a constructor that uses its old value twice.
+diff --git a/docs/guide/for-js-developers/basics.md b/docs/guide/for-js-developers/basics.md
+index 08f3e2e79..9296c1850 100644
+--- a/docs/guide/for-js-developers/basics.md
++++ b/docs/guide/for-js-developers/basics.md
+@@ -338,8 +338,11 @@ export function ways(stairs) {
+   `flags |= UPDATE | LAYOUT` (ADR 0631, amended); a
+   value read and then stepped, `let id = n; n = id + 1.0;`, is `const id
+   = n++;`
+-  ([ADR 0948](../../decisions/0948-a-value-read-then-stepped-is-plus-plus.md)). An
+-  integer's keeps its wrap, `n = (n + 1) >>> 0`, unless what comes before
++  ([ADR 0948](../../decisions/0948-a-value-read-then-stepped-is-plus-plus.md)).
++  Taking and incrementing a numeric thread-local with
++  `ID.replace(ID.get() + 1.0)` can be a postfix update too. When an ES
++  constructor uses its old value once to set a field, it writes
++  `this.id = id++`. An integer's keeps its wrap, `n = (n + 1) >>> 0`, unless what comes before
+   shows it can't wrap: below a length, `i < xs.len()` or `i + 1 <
+   js::string::length(s)`, or a constant, `i <= LIMIT`, `i += 1` is
+   `i++`, in a labeled block too
+diff --git a/scripts/mutations/prepare/stepped_whiles.ts b/scripts/mutations/prepare/stepped_whiles.ts
+index 310b6d8dc..49c8e84a9 100644
+--- a/scripts/mutations/prepare/stepped_whiles.ts
++++ b/scripts/mutations/prepare/stepped_whiles.ts
+@@ -73,10 +73,26 @@ export const mutations: Mutation[] = [
+   },
+   {
+     name: "post-step-of-any-number",
+-    breaks: "`const a = x; x = a + 2;` is `const a = x++;`, a step of one (ADR 0948)",
++    breaks: "a two-unit counter step is emitted as a one-unit postfix update",
+     file: "src/prepare/stepped_whiles.rs",
+-    find: "                                && matches!(one.kind, ExprKind::Num(n) if n == 1.0) =>\n",
+-    replace: "                                && matches!(one.kind, ExprKind::Num(_)) =>\n",
+-    tests: ["test/lowering-module-variables.test.ts", "-t", "x\\+\\+"],
++    find: "        && matches!(amount.kind, ExprKind::Num(n) if n == 1.0)\n",
++    replace: "        && matches!(amount.kind, ExprKind::Num(_))\n",
++    tests: ["test/lowering-module-variables.test.ts", "-t", "a counter read and then stepped"],
++  },
++  {
++    name: "post-step-compound-unrecognized",
++    breaks: "a counter increment formed from Cell::replace keeps its separate read and write",
++    file: "src/prepare/stepped_whiles.rs",
++    find: "        StmtKind::Compound(op, target, amount) if matches!(read.kind, ExprKind::Var(_)) => (*op, target, amount),\n",
++    replace: "",
++    tests: ["test/class-constructors.test.ts", "-t", "keeps a counter step"],
++  },
++  {
++    name: "post-step-constructor-reused",
++    breaks: "a constructor inlines a counter step whose old value is read again",
++    file: "src/prepare/stepped_whiles.rs",
++    find: "                    && js::mentions_of(&stmts[i + 2..], name) == 0 =>\n",
++    replace: "                    =>\n",
++    tests: ["test/class-constructors.test.ts", "-t", "keeps a counter step"],
+   },
+ ];
+diff --git a/src/prepare/stepped_whiles.rs b/src/prepare/stepped_whiles.rs
+index b2e33c580..28d83df69 100644
+--- a/src/prepare/stepped_whiles.rs
++++ b/src/prepare/stepped_whiles.rs
+@@ -114,22 +114,7 @@ pub(super) fn counters(module: &mut js::Module) {
+     let mut each = |stmts: &mut Vec<Stmt>| {
+         let mut i = 0;
+         while i + 1 < stmts.len() {
+-            let step = match (&stmts[i].kind, &stmts[i + 1].kind) {
+-                (StmtKind::Const(name, read) | StmtKind::Let(name, Some(read)), StmtKind::Assign(target, value))
+-                    if js::same_path(read, target) && !read.has_effects() =>
+-                {
+-                    match &value.kind {
+-                        ExprKind::Binary(op @ (Op::Add | Op::Sub), from, one)
+-                            if matches!(&from.kind, ExprKind::Var(v) if v == name)
+-                                && matches!(one.kind, ExprKind::Num(n) if n == 1.0) =>
+-                        {
+-                            Some(*op)
+-                        }
+-                        _ => None,
+-                    }
+-                }
+-                _ => None,
+-            };
++            let step = counter_step(&stmts[i], &stmts[i + 1]);
+             if let Some(op) = step
+                 && let StmtKind::Const(_, read) | StmtKind::Let(_, Some(read)) = &mut stmts[i].kind
+             {
+@@ -142,4 +127,69 @@ pub(super) fn counters(module: &mut js::Module) {
+         }
+     };
+     js::each_item_block_mut(&mut module.items, &mut each);
++    for item in &mut module.items {
++        let js::Item::Namespace(namespace) = item else { continue };
++        let Some(class) = namespace.class.as_ref().filter(|class| class.es) else {
++            continue;
++        };
++        if let Some(constructor) = namespace
++            .methods
++            .iter_mut()
++            .find(|method| method.name.is(&class.constructor))
++        {
++            inline_constructor_steps(&mut constructor.body);
++        }
++    }
++}
++
++fn counter_step(read: &Stmt, write: &Stmt) -> Option<Op> {
++    let (name, read) = match &read.kind {
++        StmtKind::Const(name, read) | StmtKind::Let(name, Some(read)) => (name, read),
++        _ => return None,
++    };
++    let (op, target, amount) = match &write.kind {
++        StmtKind::Assign(target, value) => match &value.kind {
++            ExprKind::Binary(op, from, amount) if matches!(&from.kind, ExprKind::Var(v) if v == name) => {
++                (*op, target, &**amount)
++            }
++            _ => return None,
++        },
++        // A plain variable has no getter. Its second read sees the old
++        // value too, so a previously formed compound can give that value.
++        StmtKind::Compound(op, target, amount) if matches!(read.kind, ExprKind::Var(_)) => (*op, target, amount),
++        _ => return None,
++    };
++    (matches!(op, Op::Add | Op::Sub)
++        && matches!(amount.kind, ExprKind::Num(n) if n == 1.0)
++        && js::same_path(read, target)
++        && !read.has_effects())
++    .then_some(op)
++}
++
++/// Binding an ES constructor's `this` has completed before it assigns
++/// a field. Reading that receiver has no observable effect, so the sole
++/// use of an adjacent step takes the step in its assignment.
++fn inline_constructor_steps(stmts: &mut Vec<Stmt>) {
++    let mut i = 0;
++    while i + 1 < stmts.len() {
++        let step = match (&stmts[i].kind, &stmts[i + 1].kind) {
++            (StmtKind::Const(name, step), StmtKind::Assign(target, value))
++                if matches!(step.kind, ExprKind::Stepped(..))
++                    && matches!(&target.kind, ExprKind::Member(receiver, _) if matches!(receiver.kind, ExprKind::This))
++                    && matches!(&value.kind, ExprKind::Var(read) if read == name)
++                    && js::mentions_of(&stmts[i + 2..], name) == 0 =>
++            {
++                Some(step.clone())
++            }
++            _ => None,
++        };
++        if let Some(step) = step
++            && let StmtKind::Assign(_, value) = &mut stmts[i + 1].kind
++        {
++            *value = step;
++            stmts.remove(i);
++        } else {
++            i += 1;
++        }
++    }
+ }
+diff --git a/test/class-constructors.test.ts b/test/class-constructors.test.ts
+index 9f778ab9e..176acf04d 100644
+--- a/test/class-constructors.test.ts
++++ b/test/class-constructors.test.ts
+@@ -305,3 +305,45 @@ pub fn shared() -> Rc<Counter> {
+   const made = shared();
+   expect([made instanceof Counter, made.count, made.owned()]).toEqual([true, 1, 1]);
+ });
++
++test("a constructor field keeps a counter step in its assignment", async () => {
++  const { js, dir } = compiled("constructor-counter-step", `use std::cell::Cell;
++
++thread_local! {
++    static STAGE_ID: Cell<f64> = const { Cell::new(0.0) };
++}
++
++#[cfg_attr(rust_js, rust_js::class(es))]
++pub struct Stage {
++    pub id: f64,
++}
++
++#[cfg_attr(rust_js, rust_js::class)]
++impl Stage {
++    pub fn new() -> Self {
++        Self {
++            id: STAGE_ID.replace(STAGE_ID.get() + 1.0),
++        }
++    }
++}
++
++#[cfg_attr(rust_js, rust_js::class(es))]
++pub struct Pair {
++    pub first: f64,
++    pub second: f64,
++}
++
++#[cfg_attr(rust_js, rust_js::class)]
++impl Pair {
++    pub fn new() -> Self {
++        let first = STAGE_ID.replace(STAGE_ID.get() + 1.0);
++        Self { first, second: first }
++    }
++}
++`);
++  expect(js).toContain("this.id = stageId++;");
++  const lib = await import(join(dir, "lib.js"));
++  expect([new lib.Stage().id, new lib.Stage().id]).toEqual([0, 1]);
++  expect(new lib.Pair()).toMatchObject({ first: 2, second: 2 });
++  expect(new lib.Stage().id).toBe(3);
++});

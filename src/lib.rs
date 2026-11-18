@@ -8,3 +8,6 @@ pub mod webgl_constants;
 
 #[path = "renderers/common/Pipeline.rs"]
 pub mod pipeline;
+
+#[path = "renderers/common/ProgrammableStage.rs"]
+pub mod programmable_stage;

@@ -13,6 +13,8 @@ Initialize the compiler submodule with `git submodule update --init rust-js`, th
 - `bun run build` followed by `bun run test-e2e` runs the rendering comparisons against fresh bundles. Upstream runs the five screenshot shards on Linux with Vulkan drivers and Xvfb.
 - `bun run test-treeshake` runs the upstream tree-shaking build checks.
 
+On macOS with Chrome 158, the 562-example screenshot suite had 109 reference mismatches on both the port and the unmodified upstream revision. The port also reported a one-off glTF loading error. The same glTF example passed on rerun with a 0.0% pixel difference. The five rebuilt ESM bundles matched upstream after removing formatting and comments.
+
 ## Rebuild the Rust modules
 
 The `rust-js` submodule pins the compiler and its bindings. The port keeps its compiler fixes in `patches/rust-js/`. The build applies those patches in filename order and reuses patches already applied.
@@ -33,3 +35,4 @@ The compiler uses the Rust toolchain pinned in the submodule. The generated Java
 - `src/constants.js` defines the 211 public Three.js constants. The export values and object property descriptors match upstream, and all 212 JSDoc blocks are preserved. Three object literals wrap differently, and the six standalone typedefs appear together at the top of the module.
 - `src/renderers/webgl-fallback/utils/WebGLConstants.js` maps 11 WebGL extensions to their feature names. The generated keys retain the original names, values, order, and property descriptors.
 - `src/renderers/common/Pipeline.js` is the base class for renderer pipelines. Its constructor and the four upstream JSDoc blocks are preserved. The generated class declares the default export inline.
+- `src/renderers/common/ProgrammableStage.js` stores shader code and stage metadata. Its private counter and constructor match upstream, including the counter sequence observed by JavaScript subclasses. The Rust enum emits the same three stage strings.

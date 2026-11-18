@@ -55,7 +55,7 @@ index cfb400a2b..671b759dd 100644
  where the crate writes one literal of the struct: it's that field's
  JSDoc there, as a JS object documents its fields. A struct made in more
 diff --git a/scripts/mutations/lower/classes/member_functions.ts b/scripts/mutations/lower/classes/member_functions.ts
-index 55fdfa0b1..ad4845c1f 100644
+index 55fdfa0b1..44e9af15b 100644
 --- a/scripts/mutations/lower/classes/member_functions.ts
 +++ b/scripts/mutations/lower/classes/member_functions.ts
 @@ -96,7 +96,7 @@ export const mutations: Mutation[] = [
@@ -90,8 +90,8 @@ index 55fdfa0b1..ad4845c1f 100644
 +    name: "declared-field-documented-in-constructor",
 +    breaks: "a class that declares its fields prints their JSDoc in its constructor",
 +    file: "src/lower/classes/member_functions.rs",
-+    find: "adt.is_some_and(|adt| !super::declares_fields(tcx, adt)).then_some(constructor_field_docs);",
-+    replace: "adt.is_some().then_some(constructor_field_docs);",
++    find: ".is_some_and(|adt| !super::declares_fields(tcx, adt))",
++    replace: ".is_some()",
 +    tests: ["test/lowering-comment-fields.test.ts", "-t", "a constructor assignment keeps"],
 +  },
    {

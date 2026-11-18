@@ -141,7 +141,8 @@ export default [
 		files: rustModules,
 		rules: {
 			'padded-blocks': 'off',
-			'space-in-parens': 'off'
+			'space-in-parens': 'off',
+			'space-unary-ops': 'off'
 		}
 	},
 

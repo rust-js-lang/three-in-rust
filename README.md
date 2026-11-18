@@ -1,5 +1,7 @@
 # three.js
 
+This fork is an incremental Rust port. See [the porting notes](PORTING.md) for progress and verification.
+
 [![NPM Package][npm]][npm-url]
 [![Build Size][build-size]][build-size-url]
 [![NPM Downloads][npm-downloads]][npmtrends-url]

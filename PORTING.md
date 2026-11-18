@@ -12,3 +12,21 @@ Install dependencies with `bun install --frozen-lockfile`. Puppeteer needs Chrom
 - `bun run test-e2e-cov` verifies that examples are covered by screenshots and descriptions.
 - `bun run build` followed by `bun run test-e2e` runs the rendering comparisons against fresh bundles. Upstream runs the five screenshot shards on Linux with Vulkan drivers and Xvfb.
 - `bun run test-treeshake` runs the upstream tree-shaking build checks.
+
+## Rebuild the Rust modules
+
+The compiler revision used for this checkpoint is `ae378c0fc55459c2fc4b4796502a74bec5cd4f5c`. Build it from a local rust-js checkout with its pinned Rust toolchain. Set `RUST_JS_CHECKOUT` to that checkout's absolute path and run these commands from the port:
+
+```sh
+bun install --frozen-lockfile
+mkdir -p node_modules/@rust-js
+ln -s "$RUST_JS_CHECKOUT/std" node_modules/@rust-js/std
+bun run build:rust
+bun run build:rust --check
+```
+
+The link gives the compiler the matching standard library from its checkout. The generated JavaScript, declarations, and source maps are committed beside the Rust source. Three.js imports the JavaScript from its original path.
+
+## Ported modules
+
+- `src/renderers/common/Constants.js` defines the renderer's attribute kinds and STD140 chunk size.

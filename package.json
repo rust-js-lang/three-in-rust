@@ -45,6 +45,7 @@
     "start": "npm run dev",
     "test": "bun run lint && bun run test-unit && bun run test-unit-addons",
     "build": "bun --bun rollup -c utils/build/rollup.config.js",
+    "build:rust": "bun \"$RUST_JS_CHECKOUT/tooling/cli.js\" build",
     "build-docs": "jsdoc -c utils/docs/jsdoc.config.json && npm run build-llms",
     "build-llms": "node utils/llms/build.js",
     "dev": "node utils/build/dev.js && node utils/server.js -p 8080",
@@ -107,6 +108,7 @@
     "jsdoc": "^4.0.5",
     "magic-string": "^1.0.0",
     "pngjs": "^7.0.0",
+    "prettier": "3.9.9",
     "puppeteer": "^25.0.0",
     "rollup": "^4.6.0",
     "turndown": "^7.2.2"
